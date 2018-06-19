@@ -1,51 +1,43 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.18;
 
 contract Remittance {
-    bytes32  public key_B;
-    address  public key_C;
+
     address  public owner;
+   
+    struct Details{
+        uint balance;
+        bytes32 hashPassword;
+    }
     
-    mapping (address => uint) public balances;
+    mapping (address => Details) public Remittee;
     
     event LogWithdraw(address Receiver, uint Amount);
-    event LogAddAddress(address Receiver, uint Amount);
-    event LogSetKeys(bytes32 Key1);
+    event LogsendRemittance(address Receiver, bytes32 hashPassword, uint Amount);
 
-    
     function Remittance () public payable{
         owner = msg.sender;
     }
     
-    function addAddress (address X) public payable returns(bool){
+    function sendRemittance (address to, bytes32 hashPassword) public payable returns(bool){
        require(msg.sender == owner);
-       balances[X] = msg.value;
-       key_C = X;
-       LogAddAddress(X , msg.value);
+       Remittee[to].balance += msg.value;
+       Remittee[to].hashPassword = hashPassword;
+       LogsendRemittance(to , hashPassword, msg.value);
        return true;
     }
     
-    function setKeys (bytes32 sha_key1) public returns(bool){
-       require(msg.sender == owner);
-       require(sha_key1 != 0);
-
-       key_B = sha_key1;
-       LogSetKeys(key_B);
-       return true;
-    }
-
-    function withdraw(string key_Bob) public{
-        require(key_C == msg.sender);
-        require(keccak256(key_Bob) != 0);
-        require(key_B == keccak256(key_Bob));
-        key_B = 0;
-        require(balances[msg.sender] > 0);
-       
-        uint amount = balances[msg.sender];
-        delete balances[msg.sender];
-        LogWithdraw(msg.sender, amount);
-        msg.sender.transfer(amount);
+    function withdraw(address to, bytes32 password) public{
+        require(Remittee[to].hashPassword == hashHelper(password));
+        uint amount = Remittee[to].balance;
+        require (amount > 0);
+        delete Remittee[to];
+        LogWithdraw(to, amount);
+        to.transfer(amount);
     }
     
+    function hashHelper (bytes32 pw) public pure returns(bytes32 hash){
+       return keccak256(pw);
+    }
 
     
     function () public payable{ 
