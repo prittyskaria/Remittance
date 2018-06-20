@@ -3,49 +3,54 @@ pragma solidity ^0.4.18;
 contract Remittance {
 
     address  public owner;
+    bool public isRunning;
    
-    struct DetailsStruct{
-        address to;
+    struct remittee{
         uint balance;
         bool isUsed;
     }
     
-    mapping (bytes32 => DetailsStruct) public Remittee;
+    mapping (bytes32 => remittee) public remittees;
     
-    event LogWithdraw(address Receiver, uint Amount);
-    event LogsendRemittance(address Receiver, bytes32 hashPassword, uint Amount);
+    event logWithdraw(address receiver, uint amount, bytes32 hashPassword);
+    event logSendRemittance(bytes32 hashPassword, uint amount);
     
     modifier onlyBy(address byWhom)
     {
         require(msg.sender == byWhom);
          _;
     }
+    
+     modifier onlyIsRunning()
+    {
+        require(isRunning);
+         _;
+    }
   
     function Remittance () public payable{
         owner = msg.sender;
+        isRunning = true;
     }
     
-    function sendRemittance (address to, bytes32 hashPassword) public payable  onlyBy(owner) returns(bool){
-       require(!Remittee[hashPassword].isUsed);
-       Remittee[hashPassword].to = to;
-       Remittee[hashPassword].balance += msg.value;
-       Remittee[hashPassword].isUsed = true;
-       LogsendRemittance(to , hashPassword, msg.value);
+    function sendRemittance (bytes32 hashPassword) public payable  onlyBy(owner) onlyIsRunning returns(bool){
+       require(!remittees[hashPassword].isUsed);
+       remittees[hashPassword].balance += msg.value;
+       remittees[hashPassword].isUsed = true;
+       logSendRemittance(hashPassword, msg.value);
        return true;
     }
     
-    function withdraw(address to, bytes32 password) public{
-        bytes32 hashPassword = hashHelper(password);
-        require(Remittee[hashPassword].to == to);
-        uint amount = Remittee[hashPassword].balance;
-        require (amount > 0);
-        Remittee[hashPassword].balance = 0;
-        LogWithdraw(Remittee[hashPassword].to, amount);
-        Remittee[hashPassword].to.transfer(amount);
+    function withdraw(bytes32 password) public onlyIsRunning{
+        bytes32 hashPassword = hashHelper(password,msg.sender);
+        require(remittees[hashPassword].balance > 0);
+        uint amount = remittees[hashPassword].balance;
+        remittees[hashPassword].balance = 0;
+        logWithdraw(msg.sender, amount, hashPassword);
+        msg.sender.transfer(amount);
     }
     
-    function hashHelper (bytes32 pw) public pure returns(bytes32 hash){
-       return keccak256(pw);
+    function hashHelper (bytes32 pw, address account) public pure returns(bytes32 hash){
+       return keccak256(pw,account);
     }
 
     function () public payable{ 
@@ -53,7 +58,8 @@ contract Remittance {
     }
     
     function kill() public onlyBy(owner){
-        selfdestruct(owner);
+        isRunning = false;
+        owner.transfer(this.balance);
     }
     
 }
