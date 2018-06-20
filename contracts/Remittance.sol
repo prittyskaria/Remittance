@@ -5,16 +5,17 @@ contract Remittance {
     address  public owner;
     bool public isRunning;
    
-    struct remittee{
+    struct Remittee{
         uint balance;
         bool isUsed;
     }
     
-    mapping (bytes32 => remittee) public remittees;
+    mapping (bytes32 => Remittee) public Remittees;
     
-    event logWithdraw(address receiver, uint amount, bytes32 hashPassword);
-    event logSendRemittance(bytes32 hashPassword, uint amount);
-    
+    event LogWithdraw(address receiver, uint amount, bytes32 hashPassword);
+    event LogSendRemittance(bytes32 hashPassword, uint amount);
+    event LogStopRunning(address by);
+   
     modifier onlyBy(address byWhom)
     {
         require(msg.sender == byWhom);
@@ -33,19 +34,19 @@ contract Remittance {
     }
     
     function sendRemittance (bytes32 hashPassword) public payable  onlyBy(owner) onlyIsRunning returns(bool){
-       require(!remittees[hashPassword].isUsed);
-       remittees[hashPassword].balance += msg.value;
-       remittees[hashPassword].isUsed = true;
-       logSendRemittance(hashPassword, msg.value);
+       require(!Remittees[hashPassword].isUsed);
+       Remittees[hashPassword].balance += msg.value;
+       Remittees[hashPassword].isUsed = true;
+       LogSendRemittance(hashPassword, msg.value);
        return true;
     }
     
     function withdraw(bytes32 password) public onlyIsRunning{
         bytes32 hashPassword = hashHelper(password,msg.sender);
-        require(remittees[hashPassword].balance > 0);
-        uint amount = remittees[hashPassword].balance;
-        remittees[hashPassword].balance = 0;
-        logWithdraw(msg.sender, amount, hashPassword);
+        require(Remittees[hashPassword].balance > 0);
+        uint amount = Remittees[hashPassword].balance;
+        Remittees[hashPassword].balance = 0;
+        LogWithdraw(msg.sender, amount, hashPassword);
         msg.sender.transfer(amount);
     }
     
@@ -59,6 +60,7 @@ contract Remittance {
     
     function kill() public onlyBy(owner){
         isRunning = false;
+        LogStopRunning(msg.sender);
         owner.transfer(this.balance);
     }
     
