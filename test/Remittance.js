@@ -10,7 +10,7 @@ contract('Remittance', async(accounts) => {
  let oneTimePassword_2 = "0x9dadd";
 
     beforeEach('setup contract for each test', async () => {
-        instance = await Remittance.new({ from: owner, value: 1e+18 });
+        instance = await Remittance.new({ from: owner});
     });
 
 
@@ -85,7 +85,7 @@ contract('Remittance', async(accounts) => {
     });
 
 
-    it('should let owner pause/unpause the contract', async () => {
+    it('should let owner pause/resume the contract', async () => {
       let hash = await instance.hashHelper(oneTimePassword, Carol);
       await instance.sendRemittance(hash, {from: owner, value: 1e+18});
       await instance.pause({from: owner});
@@ -96,16 +96,15 @@ contract('Remittance', async(accounts) => {
        err = error;
       }
      assert.ok(err instanceof Error);
-     let instanceAddress = await instance.address;
-     let contractBalance =  await web3.eth.getBalance(instanceAddress);
-     assert.equal(contractBalance, 0);
-     await instance.pause({from: owner});
+     await instance.resume({from: owner});
      let hash_2 = await instance.hashHelper(oneTimePassword_2, Carol);
      await instance.sendRemittance(hash_2, {from: owner, value: 1e+18});
+     let remittee = await instance.Remittees(hash_2);
+     assert.equal(remittee[0], 1e+18);
     });
 
 
-   it('should not let anyone other than owner to pause/unpause the contract', async () => {
+   it('should not let anyone other than owner to pause/resume the contract', async () => {
       let hash = await instance.hashHelper(oneTimePassword, Carol);
       await instance.sendRemittance(hash, {from: owner, value: 1e+18});
       try {

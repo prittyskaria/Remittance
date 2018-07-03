@@ -1,11 +1,10 @@
 pragma solidity ^0.4.18;
 
 
-contract Remittance {
+import "./Stoppable.sol";
 
-    address  public owner;
-    bool public isRunning;
-   
+contract Remittance is Stoppable{
+
     struct Remittee{
         uint balance;
         bool isUsed;
@@ -15,23 +14,8 @@ contract Remittance {
     
     event LogWithdraw(address receiver, uint amount, bytes32 hashPassword);
     event LogSendRemittance(bytes32 hashPassword, uint amount);
-    event LogPauseRunning(address by, bool currentState);
-   
-    modifier onlyBy(address byWhom)
-    {
-        require(msg.sender == byWhom);
-         _;
-    }
-    
-     modifier onlyIsRunning()
-    {
-        require(isRunning);
-         _;
-    }
-  
-    function Remittance () public payable{
-        owner = msg.sender;
-        isRunning = true;
+
+    function Remittance () public{
     }
     
     function sendRemittance (bytes32 hashPassword) public payable  onlyBy(owner) onlyIsRunning returns(bool){
@@ -42,29 +26,24 @@ contract Remittance {
        return true;
     }
     
-    function withdraw(bytes32 password) public onlyIsRunning{
+    function withdraw(bytes32 password) public onlyIsRunning returns(bool success){
         bytes32 hashPassword = hashHelper(password,msg.sender);
         require(Remittees[hashPassword].balance > 0);
         uint amount = Remittees[hashPassword].balance;
         Remittees[hashPassword].balance = 0;
         LogWithdraw(msg.sender, amount, hashPassword);
         msg.sender.transfer(amount);
+        return true;
     }
     
     function hashHelper (bytes32 pw, address account) public pure returns(bytes32 hash){
        return keccak256(pw,account);
     }
 
-    function () public payable{ 
+    function () public{ 
         revert();
     }
     
-    function pause() public onlyBy(owner){
-        bool saveRunning = isRunning;
-        isRunning = !saveRunning;
-        LogPauseRunning(msg.sender, isRunning);
-        owner.transfer(this.balance);
-    }
     
 }
 
