@@ -1,5 +1,6 @@
 pragma solidity ^0.4.18;
 
+
 contract Remittance {
 
     address  public owner;
@@ -14,7 +15,7 @@ contract Remittance {
     
     event LogWithdraw(address receiver, uint amount, bytes32 hashPassword);
     event LogSendRemittance(bytes32 hashPassword, uint amount);
-    event LogStopRunning(address by);
+    event LogPauseRunning(address by, bool currentState);
    
     modifier onlyBy(address byWhom)
     {
@@ -58,9 +59,10 @@ contract Remittance {
         revert();
     }
     
-    function kill() public onlyBy(owner){
-        isRunning = false;
-        LogStopRunning(msg.sender);
+    function pause() public onlyBy(owner){
+        bool saveRunning = isRunning;
+        isRunning = !saveRunning;
+        LogPauseRunning(msg.sender, isRunning);
         owner.transfer(this.balance);
     }
     
